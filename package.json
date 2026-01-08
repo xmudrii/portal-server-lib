@@ -1,6 +1,6 @@
 {
   "name": "@platform-mesh/portal-server-lib",
-  "version": "0.5.45",
+  "version": "0.5.46",
   "author": "Platform Mesh",
   "license": "Apache-2.0",
   "publishConfig": {
