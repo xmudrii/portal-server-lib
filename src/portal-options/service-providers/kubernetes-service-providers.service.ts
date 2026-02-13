@@ -33,7 +33,6 @@ export class KubernetesServiceProvidersService implements ServiceProviderService
 
     const response = await this.listContentConfigurationsForEntity(
       token,
-      entities,
       context as K8sRequestContext,
     );
 
@@ -55,14 +54,10 @@ export class KubernetesServiceProvidersService implements ServiceProviderService
           contentConfiguration.url = item.spec.remoteConfiguration?.url;
         }
 
-        const accountPath =
-          context.accountPath || context['core_platform-mesh_io_account'];
-        if (accountPath) {
-          processContentConfigurationForAccountHierarchy(
-            contentConfiguration,
-            accountPath,
-          );
-        }
+        processContentConfigurationForAccountHierarchy(
+          contentConfiguration,
+          context,
+        );
 
         return contentConfiguration;
       });
@@ -81,15 +76,12 @@ export class KubernetesServiceProvidersService implements ServiceProviderService
 
   private async listContentConfigurationsForEntity(
     token: string,
-    entities: string[],
     context: K8sRequestContext,
   ) {
-    const entity = !entities || !entities.length ? 'main' : entities[0];
     const gvr: K8sResourceDescriptor = {
       group: 'ui.platform-mesh.io',
       version: 'v1alpha1',
       plural: 'contentconfigurations',
-      labelSelector: `ui.platform-mesh.io/entity=${entity}`,
     };
 
     try {

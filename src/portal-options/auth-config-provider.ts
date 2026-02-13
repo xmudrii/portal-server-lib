@@ -23,14 +23,9 @@ export class PMAuthConfigProvider implements AuthConfigService {
     const oidcUrl = getDiscoveryEndpoint(request);
     const org = getOrganization(request);
 
-    const clientId = await this.readClientId(org);
+    const { clientId, secretRefName } = await this.readClientId(org);
     const clientSecret =
-      org === 'welcome'
-        ? await this.kcpKubernetesService.getClientSecret(
-            org,
-            `portal-client-secret-${org}`,
-          )
-        : await this.kcpKubernetesService.getClientSecret(org);
+      await this.kcpKubernetesService.getClientSecret(secretRefName);
 
     const baseDomain = process.env['BASE_DOMAINS_DEFAULT'];
     const oidc = await this.discoveryService.getOIDC(oidcUrl);
@@ -65,7 +60,9 @@ export class PMAuthConfigProvider implements AuthConfigService {
     };
   }
 
-  private async readClientId(orgName: string): Promise<string> {
+  private async readClientId(
+    orgName: string,
+  ): Promise<{ clientId: string; secretRefName: string }> {
     const k8sResourceDescriptor: K8sResourceDescriptor = {
       group: 'core.platform-mesh.io',
       version: 'v1alpha1',
@@ -73,22 +70,18 @@ export class PMAuthConfigProvider implements AuthConfigService {
       name: orgName,
     };
 
-    if (orgName === 'welcome') {
-      const result: IdentityProviderConfiguration =
-        await this.kcpKubernetesService.getClusterCustomObjectByWorkspacePath(
-          k8sResourceDescriptor,
-          'root:platform-mesh-system',
-        );
-      return result.status.managedClients[orgName].clientId;
-    }
-
     const result: IdentityProviderConfiguration =
       await this.kcpKubernetesService.listClusterCustomObject(
         k8sResourceDescriptor,
         {
           organization: orgName,
         },
+        orgName === 'welcome' ? 'root:platform-mesh-system' : undefined,
       );
-    return result.status.managedClients[orgName].clientId;
+
+    return {
+      clientId: result.status.managedClients[orgName].clientId,
+      secretRefName: result.status.managedClients[orgName].secretRef.name,
+    };
   }
 }
